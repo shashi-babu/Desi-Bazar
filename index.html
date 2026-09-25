@@ -1376,8 +1376,7 @@
   <div class="cart-content">
 
     <!-- ADDRESS COMES FIRST -->
-
-    <div class="address-box">
+<div class="address-box">
 
       <div class="address-title">
 
@@ -1479,15 +1478,82 @@
       <strong id="total">₹0</strong>
     </div>
 
+    <!-- PAYMENT METHOD SELECTION -->
+    <div style="margin: 15px 0; text-align: left;">
+      <label style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; color: #333;">Select Payment Option:</label>
+      <select id="paymentMethod" onchange="toggleUPIInfo()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; background: #fff; font-size: 14px; cursor: pointer;">
+        <option value="COD">Cash on Delivery (COD)</option>
+        <option value="UPI">Online Payment (UPI / GPay / PhonePe / Paytm)</option>
+      </select>
+    </div>
+
+    <!-- UPI INSTRUCTION BOX -->
+    <div id="upiInfoBox" style="display: none; background: #e8f5e9; border: 1px solid #a5d6a7; padding: 12px; border-radius: 6px; margin-bottom: 15px; text-align: left;">
+      <p style="margin: 0 0 5px 0; font-size: 13px; color: #1b5e20;"><strong>UPI ID:</strong> <span style="font-weight: bold;">yourname@upi</span></p>
+      <p style="margin: 0; font-size: 12px; color: #555;">When you place the order, your payment app will open automatically to complete transfer.</p>
+    </div>
+
     <button
       class="whatsapp-btn"
-      onclick="orderOnWhatsApp()"
+      onclick="handleCheckoutOrder()"
     >
       <span style="font-size:20px">☏</span>
-      Order on WhatsApp
+      Place Order
     </button>
 
   </div>
+
+  <script>
+    function toggleUPIInfo() {
+      const method = document.getElementById("paymentMethod").value;
+      const upiBox = document.getElementById("upiInfoBox");
+      if (upiBox) {
+        upiBox.style.display = (method === "UPI") ? "block" : "none";
+      }
+    }
+
+    function handleCheckoutOrder() {
+      // Gather customer data from inputs
+      const name = document.getElementById("customerName").value;
+      const phone = document.getElementById("customerPhone").value;
+      const address = document.getElementById("customerAddress").value;
+      const landmark = document.getElementById("customerLandmark").value;
+      const pincode = document.getElementById("customerPincode").value;
+      const note = document.getElementById("deliveryNote").value;
+      const paymentMethod = document.getElementById("paymentMethod").value;
+
+      if (!name || !phone || !address) {
+        alert("Please fill in all required fields (Name, Mobile, Complete Address).");
+        return;
+      }
+
+      // Full address string construction
+      const fullAddress = `${address}${landmark ? ', Near: ' + landmark : ''}${pincode ? ' - ' + pincode : ''}`;
+
+      // Retrieve items & total cost safely from global state or DOM text
+      const itemsList = window.cart || window.cartItems || [];
+      const totalText = document.getElementById("total").innerText.replace(/[^0-9.]/g, '');
+      const totalAmount = parseFloat(totalText) || 0;
+
+      const orderDetails = {
+        customerName: name,
+        phone: phone,
+        address: fullAddress,
+        items: itemsList,
+        subtotal: totalAmount,
+        total: totalAmount,
+        note: note
+      };
+
+      // 1. Trigger Firebase Save
+      if (typeof window.placeOrderToFirebase === "function") {
+        window.placeOrderToFirebase(orderDetails);
+      } else if (typeof orderOnWhatsApp === "function") {
+        // Fallback to WhatsApp if Firebase function is missing
+        orderOnWhatsApp();
+      }
+    }
+  </script>
 
 </aside>
 
