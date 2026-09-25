@@ -73,6 +73,26 @@
       width: min(1200px, calc(100% - 32px));
       margin: auto;
     }
+/* ================= pop ================= */
+    .modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+}
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  width: 300px;
+  margin: 100px auto;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
     /* ================= HEADER ================= */
 
@@ -1117,6 +1137,7 @@
         🛒 <span>Cart</span>
         <b class="cart-count" id="cartCount">0</b>
       </button>
+      <button id="authBtn" onclick="openAuthModal()" class="nav-btn cart-button">Login</button>
 
     </div>
 
@@ -2481,8 +2502,80 @@ Thank you! ❤️
   window.db = getFirestore(app);
   
   console.log("Firebase is connected!");
+  let isSignUp = false;
+
+  // Handle Login and Signup logic
+  window.handleAuth = async function() {
+    const email = document.getElementById("authEmail").value;
+    const password = document.getElementById("authPassword").value;
+
+    if (!email || !password) {
+      alert("Please fill in both email and password.");
+      return;
+    }
+
+    try {
+      if (isSignUp) {
+        await createUserWithEmailAndPassword(window.auth, email, password);
+        alert("Account created successfully!");
+      } else {
+        await signInWithEmailAndPassword(window.auth, email, password);
+        alert("Logged in successfully!");
+      }
+      window.closeAuthModal();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  window.toggleAuthMode = function() {
+    isSignUp = !isSignUp;
+    document.getElementById("modalTitle").innerText = isSignUp ? "Sign Up" : "Login";
+    document.getElementById("submitAuthBtn").innerText = isSignUp ? "Sign Up" : "Login";
+  };
+
+  window.openAuthModal = function() {
+    document.getElementById("authModal").style.display = "block";
+  };
+
+  window.closeAuthModal = function() {
+    document.getElementById("authModal").style.display = "none";
+  };
+
+  // Update button text depending on whether the user is logged in
+  onAuthStateChanged(window.auth, (user) => {
+    const authBtn = document.getElementById("authBtn");
+    if (authBtn) {
+      if (user) {
+        authBtn.innerText = "Logout";
+        authBtn.onclick = () => signOut(window.auth);
+      } else {
+        authBtn.innerText = "Login";
+        authBtn.onclick = () => window.openAuthModal();
+      }
+    }
+  });
+
+  console.log("Firebase & Auth scripts loaded successfully!");
+</script>
 </script>
   <!-------------------firebase---->
-
+<!-- Auth Modal -->
+<div id="authModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span onclick="closeAuthModal()" class="close-btn">&times;</span>
+    <h2 id="modalTitle">Login</h2>
+    
+    <input type="email" id="authEmail" placeholder="Email Address" required />
+    <input type="password" id="authPassword" placeholder="Password" required />
+    
+    <button id="submitAuthBtn" onclick="handleAuth()">Login</button>
+    
+    <p id="toggleAuthText">
+      Don't have an account? <a href="#" onclick="toggleAuthMode()">Sign Up</a>
+    </p>
+  </div>
+</div>
+  <!-- Auth Modal -->
 </body>
 </html>
