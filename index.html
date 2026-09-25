@@ -1490,6 +1490,97 @@
 
 
 </aside>
+<!-----------new experiment----->
+<script>
+  // Serviceable pincodes list
+  const ALLOWED_PINCODES = ["848236"];
+
+  function checkPincode() {
+    const pincodeInput = document.getElementById("customerPincode");
+    if (!pincodeInput) return true;
+
+    const pincode = pincodeInput.value.trim();
+
+    if (pincode && !ALLOWED_PINCODES.includes(pincode)) {
+      alert("Sorry! Delivery is not currently available in pincode " + pincode + ".");
+      return false;
+    }
+    return true;
+  }
+
+  async function orderOnWhatsApp() {
+    const name = document.getElementById("customerName").value.trim();
+    const phone = document.getElementById("customerPhone").value.trim();
+    const address = document.getElementById("customerAddress").value.trim();
+    const landmark = document.getElementById("customerLandmark").value.trim();
+    const pincode = document.getElementById("customerPincode").value.trim();
+    const note = document.getElementById("deliveryNote").value.trim();
+
+    if (!name || !phone || !address) {
+      alert("Please fill in all required fields (Name, Mobile, Complete Address).");
+      return;
+    }
+
+    // 1. Verify pincode before proceeding
+    if (!checkPincode()) {
+      return;
+    }
+
+    // 2. Lock button & show loading indicator
+    const orderBtn = document.querySelector(".whatsapp-btn");
+    const originalBtnContent = orderBtn ? orderBtn.innerHTML : "";
+
+    if (orderBtn) {
+      orderBtn.disabled = true;
+      orderBtn.style.opacity = "0.7";
+      orderBtn.style.cursor = "not-allowed";
+      orderBtn.innerHTML = "⏳ Processing Order...";
+    }
+
+    try {
+      const fullAddress = `${address}${landmark ? ', Near: ' + landmark : ''}${pincode ? ' - ' + pincode : ''}`;
+      const itemsList = window.cart || [];
+      
+      let text = `*New Order from FreshKart*\n\n`;
+      text += `*Customer Details:*\n`;
+      text += `Name: ${name}\nPhone: ${phone}\nAddress: ${fullAddress}\n`;
+      if (note) text += `Note: ${note}\n`;
+      text += `\n*Order Details:*\n`;
+
+      if (itemsList.length > 0) {
+        itemsList.forEach((item, index) => {
+          text += `${index + 1}. ${item.name} x ${item.quantity} - ₹${item.price * item.quantity}\n`;
+        });
+      }
+
+      const totalText = document.getElementById("total") ? document.getElementById("total").innerText : "₹0";
+      text += `\n*Total Amount:* ${totalText}`;
+
+      // Open WhatsApp link
+      const whatsappUrl = `https://wa.me/919876543210?text=${encodeURIComponent(text)}`;
+      window.open(whatsappUrl, "_blank");
+
+    } catch (err) {
+      console.error("Order processing error:", err);
+      alert("Could not process order. Please try again.");
+    } finally {
+      // Re-enable button
+      if (orderBtn) {
+        orderBtn.disabled = false;
+        orderBtn.style.opacity = "1";
+        orderBtn.style.cursor = "pointer";
+        orderBtn.innerHTML = originalBtnContent;
+      }
+    }
+  }
+
+  function closeCart() {
+    const drawer = document.getElementById("cartDrawer");
+    const overlay = document.getElementById("overlay");
+    if (drawer) drawer.classList.remove("open");
+    if (overlay) overlay.classList.remove("open");
+  }
+</script>
 
 
 <!-- ================= FOOTER ================= -->
