@@ -2458,12 +2458,12 @@ Thank you! ❤️
 </script>
 <!------------------firebase------->
 <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  // Import the required modules
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-  // Your web app's Firebase configuration
+  // Your Firebase configuration
   const firebaseConfig = {
     apiKey: "AIzaSyAAfj0DUyBt7tyOW3aARVS5DP_HauLJIqA",
     authDomain: "freshkart-13681.firebaseapp.com",
@@ -2475,6 +2475,12 @@ Thank you! ❤️
 
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
+  
+  // Make Auth and Database globally accessible
+  window.auth = getAuth(app);
+  window.db = getFirestore(app);
+  
+  console.log("Firebase is connected!");
 </script>
   <!-------------------firebase---->
 
