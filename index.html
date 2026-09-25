@@ -2427,8 +2427,7 @@ Thank you! ❤️
 
   updateCartCount();
 
-</script>
-<!------------------firebase------->
+<!-- FIREBASE SDK & ORDER MANAGEMENT -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { 
@@ -2499,7 +2498,7 @@ Thank you! ❤️
     document.getElementById("authModal").style.display = "none";
   };
 
-  // 1. PLACE ORDER & CLEAR CART FUNCTION
+  // 1. SAVE ORDER TO FIRESTORE & CLEAR CART
   window.placeOrderToFirebase = async function(orderDetails) {
     const currentUser = window.auth.currentUser;
 
@@ -2509,6 +2508,7 @@ Thank you! ❤️
       return;
     }
 
+    // Generate random 4-digit code
     const deliveryCode = Math.floor(1000 + Math.random() * 9000).toString();
 
     try {
@@ -2524,17 +2524,27 @@ Thank you! ❤️
         totalAmount: orderDetails.total || 0,
         note: orderDetails.note || "",
         status: "Pending",
-        deliveryCode: deliveryCode,
+        deliveryCode: deliveryCode, // Always saved
         createdAt: new Date().toISOString()
       });
 
       alert(`Order placed successfully!\n\nOrder ID: ${docRef.id}\nYour 4-Digit Delivery Code: ${deliveryCode}`);
 
-      // CLEAR CART LOGIC
+      // COMPREHENSIVE AUTO CART CLEARING
       if (typeof cart !== 'undefined') { cart = []; }
+      if (typeof cartItems !== 'undefined') { cartItems = []; }
+      
       localStorage.removeItem("cart");
+      localStorage.removeItem("cartItems");
+      localStorage.removeItem("freshkart_cart");
+
       if (typeof updateCartUI === "function") { updateCartUI(); }
       if (typeof renderCart === "function") { renderCart(); }
+      if (typeof saveCart === "function") { saveCart(); }
+
+      // Close checkout modal if open
+      const checkoutModal = document.getElementById("checkoutModal");
+      if (checkoutModal) { checkoutModal.style.display = "none"; }
 
     } catch (error) {
       console.error("Error placing order: ", error);
@@ -2542,7 +2552,7 @@ Thank you! ❤️
     }
   };
 
-  // 2. ORDER TRACKING LOGIC
+  // 2. TRACKING MODAL (WITH FALLBACK FOR OLD ORDERS)
   window.openTrackModal = async function() {
     const currentUser = window.auth.currentUser;
     if (!currentUser) {
@@ -2574,6 +2584,9 @@ Thank you! ❤️
           "Delivered": "#155724; background:#d4edda;"
         };
         const badgeStyle = statusColors[order.status] || "color:#333; background:#eee;";
+        
+        // Show N/A instead of 'undefined' for old test orders
+        const displayCode = order.deliveryCode ? order.deliveryCode : "N/A (Old Order)";
 
         html += `
           <div style="border:1px solid #ddd; padding:12px; border-radius:8px; margin-bottom:12px; background:#f9f9f9;">
@@ -2583,9 +2596,9 @@ Thank you! ❤️
                 ${order.status || 'Pending'}
               </span>
             </div>
-            <p style="margin:4px 0; font-size:14px;"><strong>Total:</strong> ₹${order.totalAmount}</p>
-            <p style="margin:4px 0; font-size:14px; color:#d32f2f;"><strong>Delivery Code:</strong> ${order.deliveryCode}</p>
-            <p style="margin:4px 0; font-size:12px; color:#666;"><strong>Address:</strong> ${order.address}</p>
+            <p style="margin:4px 0; font-size:14px;"><strong>Total:</strong> ₹${order.totalAmount || order.total || 0}</p>
+            <p style="margin:4px 0; font-size:14px; color:#d32f2f;"><strong>Delivery Code:</strong> ${displayCode}</p>
+            <p style="margin:4px 0; font-size:12px; color:#666;"><strong>Address:</strong> ${order.address || 'N/A'}</p>
           </div>
         `;
       });
