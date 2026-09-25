@@ -2499,7 +2499,7 @@ Thank you! ❤️
     document.getElementById("authModal").style.display = "none";
   };
 
-  // Function to save order to Firestore Database
+  // UPDATED FUNCTION: Saves order to Firestore with a 4-digit Delivery Code
   window.placeOrderToFirebase = async function(orderDetails) {
     const currentUser = window.auth.currentUser;
 
@@ -2509,19 +2509,27 @@ Thank you! ❤️
       return;
     }
 
+    // Generate a random 4-digit OTP/Confirmation code
+    const deliveryCode = Math.floor(1000 + Math.random() * 9000).toString();
+
     try {
       const docRef = await addDoc(collection(window.db, "orders"), {
         userId: currentUser.uid,
         userEmail: currentUser.email,
-        items: orderDetails.items || [],
-        totalAmount: orderDetails.total || 0,
-        address: orderDetails.address || "",
+        customerName: orderDetails.customerName || "",
         phone: orderDetails.phone || "",
-        status: "Pending",
+        address: orderDetails.address || "",
+        items: orderDetails.items || [],
+        subtotal: orderDetails.subtotal || 0,
+        deliveryFee: orderDetails.deliveryFee || 0,
+        totalAmount: orderDetails.total || 0,
+        note: orderDetails.note || "",
+        status: "Pending", // Status flow: Pending -> Dispatched -> Out for Delivery -> Delivered
+        deliveryCode: deliveryCode, // Saved to database for admin 4-digit code verification
         createdAt: new Date().toISOString()
       });
 
-      alert("Order placed successfully! Order ID: " + docRef.id);
+      alert(`Order placed successfully!\n\nOrder ID: ${docRef.id}\nYour 4-Digit Delivery Code: ${deliveryCode}`);
     } catch (error) {
       console.error("Error placing order: ", error);
       alert("Failed to place order: " + error.message);
