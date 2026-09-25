@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FreshKart - Admin Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; }
+    h1 { color: #2e7d32; }
+    .order-card { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .order-header { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    .status-badge { padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 0.85em; }
+    .status-Pending { background: #fff3cd; color: #856404; }
+    .status-Dispatched { background: #cce5ff; color: #004085; }
+    .status-OutForDelivery { background: #e2e3e5; color: #383d41; }
+    .status-Delivered { background: #d4edda; color: #155724; }
+    .controls { margin-top: 15px; display: flex; gap: 10px; align-items: center; }
+    select, input, button { padding: 8px 12px; border-radius: 4px; border: 1px solid #ccc; }
+    button { background: #2e7d32; color: #fff; border: none; cursor: pointer; }
+    button:hover { background: #1b5e20; }
+  </style>
+</head>
+<body>
+
+  <h1>📦 FreshKart Admin - Incoming Orders</h1>
+  <div id="ordersContainer">Loading orders...</div>
+
+  <!-- FIREBASE SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getFirestore, 
+      collection, 
+      getDocs, 
+      doc, 
+      updateDoc 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAAfj0DUyBt7tyOW3aARVS5DP_HauLJIqA",
+      authDomain: "freshkart-13681.firebaseapp.com",
+      projectId: "freshkart-13681",
+      storageBucket: "freshkart-13681.firebasestorage.app",
+      messagingSenderId: "794738764929",
+      appId: "1:794738764929:web:4945b734b7578526513180"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Fetch and display all orders
+    async function loadOrders() {
+      const container = document.getElementById("ordersContainer");
+      container.innerHTML = "";
+
+      try {
+        const querySnapshot = await getDocs(collection(db, "orders"));
+        if (querySnapshot.empty) {
+          container.innerHTML = "<p>No orders found.</p>";
+          return;
+        }
+
+        querySnapshot.forEach((docSnap) => {
+          const order = docSnap.data();
+          const orderId = docSnap.id;
+
+          const card = document.createElement("div");
+          card.className = "order-card";
+          
+          const currentStatus = order.status || "Pending";
+          const statusClass = currentStatus.replace(/\s+/g, '');
+          const deliveryCode = order.deliveryCode || "";
+
+          card.innerHTML = `
+            <div class="order-header">
+              <strong>Order ID: ${orderId}</strong>
+              <span class="status-badge status-${statusClass}">${currentStatus}</span>
+            </div>
+            <p><strong>Customer:</strong> ${order.customerName || order.userEmail || 'N/A'} (${order.phone || 'N/A'})</p>
+            <p><strong>Address:</strong> ${order.address || 'N/A'}</p>
+            <p><strong>Total Amount:</strong> ₹${order.totalAmount || order.total || 0}</p>
+            <p><strong>Items:</strong> ${order.items ? order.items.map(i => `${i.name} (x${i.quantity})`).join(", ") : 'No items'}</p>
+            
+            <div class="controls">
+              <label>Update Status:</label>
+              <select id="statusSelect-${orderId}">
+                <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending</option>
+                <option value="Dispatched" ${currentStatus === 'Dispatched' ? 'selected' : ''}>Dispatched</option>
+                <option value="Out for Delivery" ${currentStatus === 'Out for Delivery' ? 'selected' : ''}>Out for Delivery</option>
+                <option value="Delivered" ${currentStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
+              </select>
+
+              <input type="text" id="codeInput-${orderId}" placeholder="Enter 4-digit code" maxlength="4" style="width: 130px; display: ${currentStatus === 'Delivered' ? 'inline-block' : 'none'};" />
+
+              <button onclick="updateOrderStatus('${orderId}', '${deliveryCode}')">Update</button>
+            </div>
+          `;
+
+          container.appendChild(card);
+
+          // Listen for select changes to toggle 4-digit code input visibility
+          const selectElem = document.getElementById(`statusSelect-${orderId}`);
+          const codeInput = document.getElementById(`codeInput-${orderId}`);
+
+          selectElem.addEventListener("change", (e) => {
+            if (e.target.value === "Delivered") {
+              codeInput.style.display = "inline-block";
+            } else {
+              codeInput.style.display = "none";
+            }
+          });
+        });
+      } catch (err) {
+        container.innerHTML = "<p>Error loading orders: " + err.message + "</p>";
+      }
+    }
+
+    // Function to update status with 4-digit code check
+    window.updateOrderStatus = async function(orderId, expectedCode) {
+      const selectElem = document.getElementById(`statusSelect-${orderId}`);
+      const codeInput = document.getElementById(`codeInput-${orderId}`);
+      const newStatus = selectElem.value;
+
+      // If marking as Delivered, enforce the 4-digit verification code check
+      if (newStatus === "Delivered") {
+        const enteredCode = codeInput.value.trim();
+
+        if (!expectedCode) {
+          alert("⚠️ Notice: This order was placed before the code system was implemented. Updating directly.");
+        } else {
+          if (!enteredCode || enteredCode.length !== 4) {
+            alert("Please enter the 4-digit delivery code provided by the customer.");
+            return;
+          }
+
+          if (enteredCode !== expectedCode) {
+            alert("❌ Invalid Delivery Code! Status cannot be updated to Delivered.");
+            return;
+          }
+        }
+      }
+
+      try {
+        const orderRef = doc(db, "orders", orderId);
+        await updateDoc(orderRef, { status: newStatus });
+        alert(`Order status updated to "${newStatus}" successfully!`);
+        loadOrders();
+      } catch (err) {
+        alert("Error updating order: " + err.message);
+      }
+    };
+
+    // Load orders on page render
+    loadOrders();
+  </script>
+</body>
+</html>
