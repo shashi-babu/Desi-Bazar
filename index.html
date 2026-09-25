@@ -2502,7 +2502,7 @@ Thank you! ❤️
     document.getElementById("authModal").style.display = "none";
   };
 
-  // 1. SAVE ORDER TO FIRESTORE & CLEAR CART
+  // 1. SAVE ORDER TO FIRESTORE & CLEAR CART SAFELY
   window.placeOrderToFirebase = async function(orderDetails) {
     const currentUser = window.auth.currentUser;
 
@@ -2512,7 +2512,7 @@ Thank you! ❤️
       return;
     }
 
-    // Generate random 4-digit code
+    // Generate random 4-digit delivery verification code
     const deliveryCode = Math.floor(1000 + Math.random() * 9000).toString();
 
     try {
@@ -2528,27 +2528,38 @@ Thank you! ❤️
         totalAmount: orderDetails.total || 0,
         note: orderDetails.note || "",
         status: "Pending",
-        deliveryCode: deliveryCode, // Always saved
+        deliveryCode: deliveryCode,
         createdAt: new Date().toISOString()
       });
 
       alert(`Order placed successfully!\n\nOrder ID: ${docRef.id}\nYour 4-Digit Delivery Code: ${deliveryCode}`);
 
-      // COMPREHENSIVE AUTO CART CLEARING
-      if (typeof cart !== 'undefined') { cart = []; }
-      if (typeof cartItems !== 'undefined') { cartItems = []; }
-      
+      // SAFE VARIABLE CLEARING (Prevents "cartItems is not defined" error)
+      try {
+        if (window.cart) { window.cart = []; }
+        if (window.cartItems) { window.cartItems = []; }
+      } catch (e) {
+        console.log("Cart variable clear warning:", e);
+      }
+
+      // CLEAR STORAGE
       localStorage.removeItem("cart");
       localStorage.removeItem("cartItems");
       localStorage.removeItem("freshkart_cart");
 
-      if (typeof updateCartUI === "function") { updateCartUI(); }
-      if (typeof renderCart === "function") { renderCart(); }
-      if (typeof saveCart === "function") { saveCart(); }
+      // REFRESH UI FUNCTIONS IF AVAILABLE
+      if (typeof window.updateCartUI === "function") { window.updateCartUI(); }
+      if (typeof window.renderCart === "function") { window.renderCart(); }
+      if (typeof window.saveCart === "function") { window.saveCart(); }
 
-      // Close checkout modal if open
-      const checkoutModal = document.getElementById("checkoutModal");
-      if (checkoutModal) { checkoutModal.style.display = "none"; }
+      // CLOSE CART SIDEBAR OR MODAL
+      const cartDrawer = document.getElementById("cartDrawer") || document.getElementById("checkoutModal") || document.querySelector(".cart-modal");
+      if (cartDrawer) { cartDrawer.style.display = "none"; }
+
+      // HARD REFRESH TO RE-INITIALIZE UI TO FRESH 0-ITEM CART
+      setTimeout(() => {
+        location.reload();
+      }, 1000);
 
     } catch (error) {
       console.error("Error placing order: ", error);
@@ -2556,7 +2567,7 @@ Thank you! ❤️
     }
   };
 
-  // 2. TRACKING MODAL (WITH FALLBACK FOR OLD ORDERS)
+  // 2. TRACKING MODAL
   window.openTrackModal = async function() {
     const currentUser = window.auth.currentUser;
     if (!currentUser) {
@@ -2588,8 +2599,6 @@ Thank you! ❤️
           "Delivered": "#155724; background:#d4edda;"
         };
         const badgeStyle = statusColors[order.status] || "color:#333; background:#eee;";
-        
-        // Show N/A instead of 'undefined' for old test orders
         const displayCode = order.deliveryCode ? order.deliveryCode : "N/A (Old Order)";
 
         html += `
