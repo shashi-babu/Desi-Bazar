@@ -2432,6 +2432,7 @@ Thank you! ❤️
 <!------------------firebase------->
 
 <!-- FIREBASE SDK & ORDER MANAGEMENT -->
+<!-- FIREBASE SDK & ORDER MANAGEMENT -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { 
@@ -2502,7 +2503,7 @@ Thank you! ❤️
     document.getElementById("authModal").style.display = "none";
   };
 
-  // 1. SAVE ORDER TO FIRESTORE & CLEAR CART SAFELY
+  // 1. PLACE ORDER TO FIREBASE & GUARANTEED CART CLEAR
   window.placeOrderToFirebase = async function(orderDetails) {
     const currentUser = window.auth.currentUser;
 
@@ -2512,7 +2513,7 @@ Thank you! ❤️
       return;
     }
 
-    // Generate random 4-digit delivery verification code
+    // Generate random 4-digit verification code
     const deliveryCode = Math.floor(1000 + Math.random() * 9000).toString();
 
     try {
@@ -2534,32 +2535,32 @@ Thank you! ❤️
 
       alert(`Order placed successfully!\n\nOrder ID: ${docRef.id}\nYour 4-Digit Delivery Code: ${deliveryCode}`);
 
-      // SAFE VARIABLE CLEARING (Prevents "cartItems is not defined" error)
+      // STEP A: CLEAR ALL BROWSER STORAGE
+      localStorage.clear(); // Clears all cart keys in storage completely
+
+      // STEP B: SAFE IN-MEMORY VARIABLE RESET
       try {
+        if (typeof cart !== 'undefined') { cart = []; }
+        if (typeof cartItems !== 'undefined') { cartItems = []; }
         if (window.cart) { window.cart = []; }
         if (window.cartItems) { window.cartItems = []; }
-      } catch (e) {
-        console.log("Cart variable clear warning:", e);
+      } catch (err) {
+        console.log("Memory clear warning:", err);
       }
 
-      // CLEAR STORAGE
-      localStorage.removeItem("cart");
-      localStorage.removeItem("cartItems");
-      localStorage.removeItem("freshkart_cart");
+      // STEP C: TRIGGER UI RESET FUNCTIONS IF THEY EXIST
+      try {
+        if (typeof updateCartUI === "function") { updateCartUI(); }
+        if (typeof renderCart === "function") { renderCart(); }
+        if (typeof saveCart === "function") { saveCart(); }
+      } catch (err) {
+        console.log("UI function warning:", err);
+      }
 
-      // REFRESH UI FUNCTIONS IF AVAILABLE
-      if (typeof window.updateCartUI === "function") { window.updateCartUI(); }
-      if (typeof window.renderCart === "function") { window.renderCart(); }
-      if (typeof window.saveCart === "function") { window.saveCart(); }
-
-      // CLOSE CART SIDEBAR OR MODAL
-      const cartDrawer = document.getElementById("cartDrawer") || document.getElementById("checkoutModal") || document.querySelector(".cart-modal");
-      if (cartDrawer) { cartDrawer.style.display = "none"; }
-
-      // HARD REFRESH TO RE-INITIALIZE UI TO FRESH 0-ITEM CART
+      // STEP D: RELOAD PAGE TO FORCE FRESH EMPTY CART STATE
       setTimeout(() => {
-        location.reload();
-      }, 1000);
+        window.location.reload();
+      }, 500);
 
     } catch (error) {
       console.error("Error placing order: ", error);
